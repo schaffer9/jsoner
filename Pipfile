@@ -20,6 +20,9 @@ pytest-pycharm = "*"
 sphinxcontrib-spelling = "*"
 
 [packages]
+pytz = "*"
+ipdb = "*"
+ipython = "*"
 
 [requires]
 python_version = "3.7"
