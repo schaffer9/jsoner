@@ -1,16 +1,16 @@
 # -*- coding: utf-8 -*-
 
-import abc
-import json
-import typing as T
-from collections import UserDict
-from functools import partial
-from datetime import datetime
-from importlib import import_module
-
-import pytz
-
-from .errors import JsonEncodingError
+# import abc
+# import json
+# import typing as T
+# from collections import UserDict
+# from functools import partial
+# from datetime import datetime
+# from importlib import import_module
+#
+# import pytz
+#
+# from .errors import JsonEncodingError
 # from .registry import encoding_registry
 # from .registry import decoding_registry
 #
@@ -38,7 +38,8 @@ from .errors import JsonEncodingError
 #
 #     @classmethod
 #     def __subclasshook__(cls, other_cls: type):
-#         is_dict_convertible = hasattr(other_cls, 'to_dict') and hasattr(other_cls, 'from_dict')
+#         is_dict_convertible = hasattr(other_cls,
+#         'to_dict') and hasattr(other_cls, 'from_dict')
 #         return is_dict_convertible
 #
 #
@@ -54,7 +55,8 @@ from .errors import JsonEncodingError
 #
 #     @classmethod
 #     def __subclasshook__(cls, other_cls: type):
-#         is_str_convertible = hasattr(other_cls, 'to_json') and hasattr(other_cls, 'from_json')
+#         is_str_convertible = hasattr(other_cls, 'to_json')
+#         and hasattr(other_cls, 'from_json')
 #         return is_str_convertible
 
 
@@ -64,7 +66,8 @@ from .errors import JsonEncodingError
 #     is_dict_convertible = isinstance(obj, JsonDictSerializable)
 #     is_in_default_encoding = isinstance(obj, JsonSerializable)
 #
-#     serializable = json_serializable or is_dict_convertible or is_in_default_encoding
+#     serializable = json_serializable or is_dict_convertible
+#     or is_in_default_encoding
 #
 #     if not serializable:
 #         try:
@@ -72,7 +75,8 @@ from .errors import JsonEncodingError
 #             is_dict_convertible = issubclass(obj, JsonDictSerializable)
 #             is_in_default_encoding = issubclass(obj, JsonSerializable)
 #
-#             serializable = json_serializable or is_dict_convertible or is_in_default_encoding
+#             serializable = json_serializable or is_dict_convertible
+#             or is_in_default_encoding
 #         except TypeError:
 #             pass
 #     return serializable
@@ -154,7 +158,8 @@ from .errors import JsonEncodingError
 #                 obj_module = import_module(obj_module)
 #                 obj_type = getattr(obj_module, obj_type)
 #             else:
-#                 msg = 'obj_type has no module information!. Please provide a module!'
+#                 msg = 'obj_type has no module information!.
+#                 Please provide a module!'
 #                 raise ValueError(msg)
 #
 #         return obj_type
@@ -183,7 +188,8 @@ from .errors import JsonEncodingError
 # @encoding_registry(datetime)
 # def datetime_to_dict(dt: datetime):
 #     """
-#     Converts a datetime object to a dictionary, by saving the timestamp and the
+#     Converts a datetime object to a dictionary, by saving
+#     the timestamp and the
 #     timezone.
 #
 #     :param dt:
@@ -256,7 +262,8 @@ from .errors import JsonEncodingError
 # class JsonEncoder(json.JSONEncoder):
 #     """
 #     JsonEncoder will decode datetime objects and all objects,
-#     which implement either `to_dict` and `from_dict` or `to_json` and `from_json`.
+#     which implement either `to_dict` and `from_dict` or
+#     `to_json` and `from_json`.
 #
 #     If you want to implement to_json, you can use the  json encoder.
 #     This way, all objects which implement one of those methods will also be
@@ -279,7 +286,8 @@ from .errors import JsonEncodingError
 #             if isinstance(obj, JsonStrSerializable):
 #                 json_str = obj.to_json()
 #                 if not isinstance(json_str, str):
-#                     msg = '`to_json` from {} did not return a valid json string!'.format(obj)
+#                     msg = '`to_json` from {} did not return a
+#                     valid json string!'.format(obj)
 #                     raise JsonEncodingError(msg)
 #
 #                 obj_dict['__json_data__'] = json_str
@@ -342,7 +350,8 @@ from .errors import JsonEncodingError
 # # # Encoding function
 # # def dumps(obj):
 # #     """
-# #     Dumps objects into a json format. Usually classes cannot be dumped, however
+# #     Dumps objects into a json format. Usually
+# #     classes cannot be dumped, however
 # #     the JsonEncoder looks for either `to_json` and `from_json` or `to_dict`
 # #     and `from dict` and uses those methods as a hook to also serialize
 # #     complex python objects.

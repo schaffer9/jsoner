@@ -3,14 +3,14 @@
 
 """Tests for `jsoner` package."""
 
-import json
-import unittest
-from datetime import datetime
-
-import pytz
-
-from jsoner import jsoner
-from jsoner.errors import JsonEncodingError
+# import json
+# import unittest
+# from datetime import datetime
+#
+# import pytz
+#
+# from jsoner import jsoner
+# from jsoner.errors import JsonEncodingError
 
 # ##################
 # # Testing objects
@@ -123,7 +123,8 @@ from jsoner.errors import JsonEncodingError
 #         self.assertEqual(
 #             json.loads(json_str),
 #             json.loads('{{"__obj_module__": "datetime", "__type__": '
-#                        '"datetime", "__json_data__": {{"epoch": {}, "tz": "UTC"}}'
+#                        '"datetime", "__json_data__":
+#                        {{"epoch": {}, "tz": "UTC"}}'
 #                        '}}'.format(dd.timestamp()))
 #         )
 #
@@ -145,7 +146,8 @@ from jsoner.errors import JsonEncodingError
 #         json_str = jsoner.dumps(dummy)
 #         self.assertEqual(
 #             json.loads(json_str),
-#             json.loads('{"__type__": "DummyObject1", "__json_data__": "1234", '
+#             json.loads('{"__type__":
+#             "DummyObject1", "__json_data__": "1234", '
 #                        '"__obj_module__": "test_jsoner"}')
 #         )
 #

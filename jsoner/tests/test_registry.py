@@ -34,9 +34,6 @@ class TestRegistry(TestCase):
     def test_004_register_same_key_twice(self):
         """
         If the same key is registered twice, a :exc:`KeyError` is raised.
-        Returns
-        -------
-
         """
         r = Registry()
 
@@ -70,6 +67,10 @@ class TestRegistry(TestCase):
 
 
 class DummyObject:
+    pass
+
+
+class DummyObject2(DummyObject):
     pass
 
 
@@ -145,6 +146,28 @@ class TestSubclassRegistry(TestCase):
 
         self.assertEqual(r.get((1, 2, 3)), None)
         self.assertIsNone(r.get(DummyObject))
+
+    def test_009_load_from_str(self):
+        r = SubclassRegistry()
+
+        r.add('jsoner.tests.test_registry.DummyObject', 42)
+
+        self.assertEqual(r.get('jsoner.tests.test_registry.DummyObject2'), 42)
+
+    def test_010_add_none(self):
+        r = SubclassRegistry()
+
+        r.add('foo', None)
+
+        self.assertEqual(r.get('foo'), None)
+
+    def test_011_add_none(self):
+        r = SubclassRegistry()
+
+        r.add('jsoner.tests.test_registry.DummyObject', None)
+
+        self.assertEqual(r.get('jsoner.tests.test_registry.DummyObject2'),
+                         None)
 
 
 class TestImportObject(TestCase):

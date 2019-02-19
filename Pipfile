@@ -18,6 +18,7 @@ pytest-cov = "*"
 pytest-sugar = "*"
 pytest-pycharm = "*"
 sphinxcontrib-spelling = "*"
+mypy = "*"
 
 [packages]
 pytz = "*"

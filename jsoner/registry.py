@@ -1,21 +1,77 @@
-from collections import UserDict
+import pydoc
 import typing as T
-from importlib import import_module
+from collections import UserDict
+from typing import Callable
 
 
 class Registry(UserDict):
+    """
+    The :class:`Registry` allows simple key value mapping. Each key is
+    only allowed once in the registry.
+
+    Usage::
+        >>> reg = Registry()
+
+        >>> reg.add('foo', 42)
+        >>> reg.get('foo')
+        42
+
+        >>> reg = Registry()
+        >>> @reg.register('foo')
+        ... def foo():
+        ...     return 42
+
+        >>> reg.get('foo')()
+        42
+
+    """
     @property
-    def registry(self):
+    def registry(self) -> dict:
+        """
+        Returns
+        -------
+        dict
+            The registry dictionary.
+        """
         return self.data
 
-    def add(self, key, value):
+    def add(self, key: T.Any, value: T.Any) -> None:
+        """
+        Adds the key, value pair to the registry. Each key is only
+        allowed once in the registry.
+
+        Parameters
+        ----------
+        key
+        value
+
+        Raises
+        ------
+        KeyError
+            If the key is already in the registry.
+
+        """
         if key in self.data:
             msg = 'Key `{}` is already in the registry!'.format(key)
             raise KeyError(msg)
 
         self.data[key] = value
 
-    def register(self, key):
+    def register(self, key: T.Any) -> Callable:
+        """
+        :meth:`register` servers as a decorator to add functions to the
+        registry.
+
+        Parameters
+        ----------
+        key: T.Any
+
+        Returns
+        -------
+        Callable
+            The decorator function, which takes one argument, adds it
+            to the registry and returns the argument without modifying it.
+        """
         def inner(func):
             self.add(key, func)
             return inner
@@ -23,33 +79,92 @@ class Registry(UserDict):
 
 
 class SubclassRegistry(Registry):
-    def get(self, object_or_type: T.Any) -> T.Any:
+    """
+    The :class:`SubclassRegistry` will not only map a single key value pair,
+    but will also retrieve a value if the key, or the type of the key
+    is a Subclass of any of the keys.
+
+    If the key, seems to be a object, which could potentially be in the
+    registry, but is not found at once, the :class:`SubclassRegistry` will
+    search the mro of the object and check against its entries.
+
+    Usage::
+
+        >>> reg = SubclassRegistry()
+
+        >>> reg.add(dict, 42)
+        >>> reg.get(dict)
+        42
+
+        >>> class A:
+        ...     pass
+        >>> class B(A):
+        ...     pass
+
+        >>> reg.add(A, 'bar')
+        >>> reg.get(B)
+        'bar'
+        >>> reg.get(B())
+        'bar'
+
+        The registration also works with strings
+
+        >>> from datetime import datetime
+
+        >>> reg.add('datetime.datetime', 'foo')
+        >>> reg.get(datetime)
+        'foo'
+
+        >>> reg.get('dict')
+        42
+
+        Furthermore it can be used as decorator.
+        >>> reg = SubclassRegistry()
+        >>> @reg.register(A)
+        ... def foo():
+        ...     return 42
+
+        >>> reg.get(A)()
+        42
+        >>> reg.get(B)()
+        42
+
+    """
+    def __getitem__(self, key: T.Any) -> T.Any:
         """
         Returns the registered function for the given object or type
-        :param object_or_type:
+        :param key:
         :return:
         """
-        value = super().get(object_or_type)
+        msg = 'Key `{}` not found in registry.'.format(key)
+
+        value = self.data.get(key)
+
         if value is not None:
             return value
 
-        if isinstance(object_or_type, str):
+        if isinstance(key, str):
             try:
-                obj_type = import_object(object_or_type)
+                obj_type = import_object(key)
             except ImportError:
-                return None
+                raise KeyError(msg)
 
-        elif isinstance(object_or_type, type):
-            obj_type = object_or_type
+        # get the object type
+        elif isinstance(key, type):
+            obj_type = key
         else:
-            obj_type = object_or_type.__class__
+            obj_type = key.__class__
 
         try:
             return self.data[obj_type]
         except KeyError:
             pass
 
-        mro = obj_type.mro()
+        try:
+            mro = obj_type.mro()
+        except AttributeError:
+            raise KeyError(msg)
+
         # walk mro
         for cls in mro:
             for registered_cls, value in self.data.items():
@@ -61,105 +176,34 @@ class SubclassRegistry(Registry):
                 if cls is registered_cls:
                     return value
         else:
-            return None
+            raise KeyError(msg)
 
 
-def import_object(path: str) -> type:
-    module, _, obj = path.rpartition('.')
-    if not module:
-        module = import_module('__main__')
-    else:
-        try:
-            module = import_module(module)
-        except (ValueError, ModuleNotFoundError):
-            msg = 'Empty module name. ' \
-                  'Could not import object `{}`'.format(path)
-            raise ImportError(msg)
-    try:
-        return getattr(module, obj)
-    except AttributeError:
-        msg = 'Could not import object `{}`'.format(path)
+def import_object(path: str) -> T.Any:
+    """
+    Import the object or raise an :exc:`ImportError` if the object is not
+    found.
+
+    Parameters
+    ----------
+    path: str
+        The path to the object.
+
+    Returns
+    -------
+        The imported object.
+
+    Raises
+    ------
+    ImportError
+
+    """
+    t = pydoc.locate(path)
+    if t is None:
+        msg = 'Object `{}` could not be found'.format(path)
         raise ImportError(msg)
+    return t
 
-# class Registry:
-#     registry = {}
-#
-#     def __init__(self, register_type: type):
-#         if register_type in self.registry:
-#             msg = "`{}` was already registered!".format(register_type)
-#             raise KeyError(msg)
-#
-#         self.register_type = register_type
-#
-#     def __call__(self, callable_obj: callable) -> callable:
-#         self.registry[self.register_type] = callable_obj
-#
-#         return callable_obj
-#
-#     @classmethod
-#     def get(cls, obj_or_type: T.Union[object, type]) -> callable:
-#         """
-#         Returns the registered function for the given object or type
-#         :param obj_or_type:
-#         :return:
-#         """
-#         if obj_or_type is None:
-#             return None
-#         try:
-#             return cls.registry[obj_or_type]
-#         except KeyError:
-#             pass
-#
-#         obj_type = obj_or_type.__class__
-#
-#         try:
-#             return cls.registry[obj_type]
-#         except KeyError:
-#             pass
-#
-#         for default_obj_type in cls.registry:
-#             if issubclass(obj_type, default_obj_type):
-#                 return cls.registry[default_obj_type]
-#         else:
-#             return None
-#
-#
-# class decoding_registry(Registry):
-#     registry = {}
-#
-#
-# class encoding_registry(Registry):
-#     registry = {}
-#
-#
-# def _get_obj_type(obj_type: str, module: str = None):
-#     """
-#     Given an object type and a module, this function returns
-#     the corresponding class.
-#
-#     *obj_type* can also be of form *module.type*. In this case the module
-#     argument can be empty.
-#
-#     :param obj_type:
-#     :param module:
-#     :return:
-#     """
-#     try:
-#         if module is not None:
-#             obj_module = import_module(module)
-#             obj_type = obj_type.rpartition('.')[2]
-#
-#             obj_type = getattr(obj_module, obj_type)
-#
-#         else:
-#             obj_module, _, obj_type = obj_type.rpartition('.')
-#             if obj_module:
-#                 obj_module = import_module(obj_module)
-#                 obj_type = getattr(obj_module, obj_type)
-#             else:
-#                 msg = 'obj_type has no module information!. Please provide a module!'
-#                 raise ValueError(msg)
-#
-#         return obj_type
-#     except (ImportError, AttributeError):
-#         return None
+
+encoders = SubclassRegistry()
+decoders = SubclassRegistry()
