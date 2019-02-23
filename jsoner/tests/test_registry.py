@@ -169,6 +169,32 @@ class TestSubclassRegistry(TestCase):
         self.assertEqual(r.get('jsoner.tests.test_registry.DummyObject2'),
                          None)
 
+    def test_012_contains(self):
+        r = SubclassRegistry()
+
+        r.add('jsoner.tests.test_registry.DummyObject', None)
+
+        self.assertIn('jsoner.tests.test_registry.DummyObject', r)
+
+    def test_013_contains(self):
+        r = SubclassRegistry()
+
+        r.add(DummyObject, 42)
+
+        self.assertIn(DummyObject, r)
+
+    def test_014_contains(self):
+        r = SubclassRegistry()
+
+        r.add(DummyObject, 42)
+
+        self.assertIn(DummyObject2, r)
+
+    def test_015_contains(self):
+        r = SubclassRegistry()
+
+        self.assertNotIn(DummyObject2, r)
+
 
 class TestImportObject(TestCase):
     def test_000_import_dummy_object(self):

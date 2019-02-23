@@ -77,6 +77,16 @@ class Registry(UserDict):
             return inner
         return inner
 
+    def __contains__(self, item) -> bool:
+        in_regestry = super().__contains__(item)
+        if not in_regestry:
+            try:
+                self.__getitem__(item)
+                in_regestry = True
+            except KeyError:
+                pass
+        return in_regestry
+
 
 class SubclassRegistry(Registry):
     """
