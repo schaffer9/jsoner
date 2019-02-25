@@ -2,10 +2,6 @@
 jsoner
 ======
 
-
-.. image:: https://img.shields.io/pypi/v/jsoner.svg
-        :target: https://pypi.python.org/pypi/jsoner
-
 .. image:: https://img.shields.io/travis/sschaffer92/jsoner.svg
         :target: https://travis-ci.org/sschaffer92/jsoner
 
@@ -13,7 +9,9 @@ jsoner
         :target: https://jsoner.readthedocs.io/en/latest/?badge=latest
         :alt: Documentation Status
 
-
+.. image:: https://coveralls.io/repos/github/sschaffer92/jsoner/badge.svg
+        :target: https://coveralls.io/github/sschaffer92/jsoner
+        :alt: Coverage
 
 
 Jsoner allows you to easily convert your classes to json and back.

@@ -1,6 +1,8 @@
 from unittest import TestCase
 
-from jsoner.registry import Registry, SubclassRegistry, import_object
+from jsoner.registry import Registry
+from jsoner.registry import SubclassRegistry
+from jsoner.registry import import_object
 
 
 class TestRegistry(TestCase):

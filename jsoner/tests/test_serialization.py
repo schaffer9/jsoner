@@ -2,19 +2,18 @@
 
 import json
 import unittest
-from datetime import datetime
 
-import pytz
-
-from ..serialization import JsonerSerializable
-from ..serialization import DictConvertible
-from ..serialization import StrConvertible
-from ..serialization import JsonEncoder
-from ..registry import encoders
 from ..registry import decoders
+from ..registry import encoders
+from ..serialization import DictConvertible
+from ..serialization import JsonEncoder
+from ..serialization import JsonerSerializable
+from ..serialization import StrConvertible
+from ..serialization import json_hook
+from ..serialization import maybe_convert_to_obj
 
 
-class TestJsonSerializable(unittest.TestCase):
+class TestStrSerializable(unittest.TestCase):
 
     def test_000_primitive_type(self):
         self.assertFalse(isinstance(42, JsonerSerializable))
@@ -55,7 +54,7 @@ class TestJsonSerializable(unittest.TestCase):
         del encoders[Dummy]
         del decoders[Dummy]
 
-    def test_000_dict_convertible(self):
+    def test_004_dict_convertible(self):
         class A:
             def to_dict(self) -> dict:
                 return {}
@@ -66,6 +65,12 @@ class TestJsonSerializable(unittest.TestCase):
         self.assertTrue(isinstance(A(), JsonerSerializable))
         self.assertTrue(issubclass(A, JsonerSerializable))
 
+    def test_005_dict_convertible(self):
+        with self.assertRaises(NotImplementedError):
+            DictConvertible.from_dict({})
+        with self.assertRaises(NotImplementedError):
+            DictConvertible.to_dict({})
+
 
 class TestDictConvertible(unittest.TestCase):
     def test_000_dict_convertible(self):
@@ -73,7 +78,8 @@ class TestDictConvertible(unittest.TestCase):
             def to_dict(self) -> dict:
                 return {}
 
-            def from_dict(self, d: dict) -> 'A':
+            @classmethod
+            def from_dict(cls, d: dict) -> 'A':
                 return A()
 
         self.assertTrue(isinstance(A(), DictConvertible))
@@ -86,44 +92,46 @@ class TestStrConvertible(unittest.TestCase):
             def to_str(self) -> str:
                 return ''
 
-            def from_str(self, s: str) -> 'A':
+            @classmethod
+            def from_str(cls, s: str) -> 'A':
                 return A()
 
         self.assertTrue(isinstance(A(), StrConvertible))
         self.assertTrue(issubclass(A, StrConvertible))
 
+    def test_002_str_convertible(self):
+        with self.assertRaises(NotImplementedError):
+            StrConvertible.from_str('')
+        with self.assertRaises(NotImplementedError):
+            StrConvertible.to_str('')
+
 
 class Dummy:
-    pass
+    def __eq__(self, other: object) -> bool:
+        assert isinstance(other, Dummy)
+        return True
 
 
 class DummyDictConvertible:
     def to_dict(self) -> dict:
         return {}
 
-    def from_dict(self, d: dict) -> 'DummyDictConvertible':
-        return self.__class__()
+    @classmethod
+    def from_dict(cls, d: dict) -> 'DummyDictConvertible':
+        return cls()
 
 
 class DummyStrConvertible:
     def to_str(self) -> str:
         return ''
 
-    def from_str(self, s: str) -> 'DummyStrConvertible':
-        return self.__class__()
+    @classmethod
+    def from_str(cls, s: str) -> 'DummyStrConvertible':
+        return cls()
 
 
 class TestJsonEncoder(unittest.TestCase):
-    # def test_000_encode_dict(self):
-    #     json_str = dumps({'test': 123})
-    #
-    #     self.assertEqual(json_str, '{"test": 123}')
-    #
-    # def test_001_encode_list(self):
-    #     json_str = dumps([1, 2, 3, 4, 5])
-    #
-    #     self.assertEqual(json_str, '[1, 2, 3, 4, 5]')
-    #
+
     def test_000_default_pass_dict(self):
         encoder = JsonEncoder()
 
@@ -179,7 +187,7 @@ class TestJsonEncoder(unittest.TestCase):
         result = encoder.encode(A())
 
         expected = {
-            '__obj_cls__' : A.__module__ + '.' + A.__qualname__,
+            '__obj_cls__': A.__module__ + '.' + A.__qualname__,
             '__json_data__': ''
         }
         self.assertDictEqual(json.loads(result), expected)
@@ -236,3 +244,127 @@ class TestJsonEncoder(unittest.TestCase):
             pass
 
         self.assertRaises(TypeError, encoder.encode, Dummy())
+
+
+class TestDecoding(unittest.TestCase):
+    def test_000_maybe_convert_to_obj(self):
+        self.assertDictEqual(maybe_convert_to_obj({}), {})
+
+    def test_001_maybe_convert_to_obj(self):
+        data = {
+            '__cls__': Dummy.__module__ + '.' + Dummy.__qualname__
+        }
+        self.assertIs(maybe_convert_to_obj(data), Dummy)
+
+    def test_002_maybe_convert_to_dict(self):
+        data = {
+            '__obj_cls__': Dummy.__module__ + '.' + Dummy.__qualname__
+        }
+        decoders.add(Dummy, lambda d: Dummy())
+
+        self.assertEqual(maybe_convert_to_obj(data), Dummy())
+
+        del decoders[Dummy]
+
+    def test_003_object_not_found(self):
+        data = {'__cls__': 'abc.abc'}
+
+        self.assertIs(maybe_convert_to_obj(data), data)
+
+    def test_005_object_not_found(self):
+        data = {'__obj_cls__': 'abc.abc'}
+
+        self.assertIs(maybe_convert_to_obj(data), data)
+
+    def test_006_str_convertible(self):
+        data = {
+            "__obj_cls__": "jsoner.tests.test_serialization.DummyStrConvertible",
+            "__json_data__": ""
+        }
+
+        result = maybe_convert_to_obj(data)
+
+        self.assertIsInstance(result, DummyStrConvertible)
+
+    def test_007_dict_convertible(self):
+        data = {
+            "__obj_cls__": "jsoner.tests.test_serialization.DummyDictConvertible",
+            "__json_data__": {}
+        }
+
+        result = maybe_convert_to_obj(data)
+
+        self.assertIsInstance(result, DummyDictConvertible)
+
+    def test_008_not_registered(self):
+        data = {
+            "__obj_cls__": "jsoner.tests.test_serialization.Dummy",
+            "__json_data__": {}
+        }
+
+        result = maybe_convert_to_obj(data)
+
+        self.assertDictEqual(result, data)
+
+    def test_009_registered_obj(self):
+        data = {
+            '__obj_cls__': Dummy.__module__ + '.' + Dummy.__qualname__
+        }
+
+        @decoders.register(Dummy)
+        def decode(data, cls):
+            assert cls is Dummy
+            return cls()
+
+        self.assertEqual(maybe_convert_to_obj(data), Dummy())
+
+        del decoders[Dummy]
+
+    def test_010_register_arbitrary_objects(self):
+        data = {
+            '__obj_cls__': Dummy.__module__ + '.' + Dummy.__qualname__
+        }
+
+        decoders.add(Dummy, 42)
+
+        self.assertEqual(maybe_convert_to_obj(data), 42)
+
+        del decoders[Dummy]
+
+
+class TestJsonHook(unittest.TestCase):
+    def test_000_json_hook(self):
+        self.assertEqual(json_hook(''), '')
+
+    def test_001_json_hook(self):
+        self.assertEqual(json_hook({}), {})
+
+    def test_002_json_hook(self):
+        data = {
+            "__obj_cls__": "jsoner.tests.test_serialization.Dummy",
+            "__json_data__": {}
+        }
+
+        result = json_hook(data)
+
+        self.assertDictEqual(result, data)
+
+    def test_003_dict_convertible(self):
+        data = {
+            "__obj_cls__": "jsoner.tests.test_serialization.DummyDictConvertible",
+            "__json_data__": {}
+        }
+
+        result = json_hook(data)
+
+        self.assertIsInstance(result, DummyDictConvertible)
+
+    def test_004_str_convertible(self):
+        data = {
+            "__obj_cls__": "jsoner.tests.test_serialization.DummyStrConvertible",
+            "__json_data__": ""
+        }
+
+        result = json_hook(data)
+
+        self.assertIsInstance(result, DummyStrConvertible)

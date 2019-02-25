@@ -2,13 +2,21 @@
 
 language: python
 python:
-  - 3.7
-  - 3.6
-  - 3.5
-  - 3.4
+    - 3.6
+    - 3.5
+    - 3.4
+    - pypy3
+
+matrix:
+  include:
+    - python: 3.7
+      dist: xenial
+      sudo: true
 
 # Command to install dependencies, e.g. pip install -r requirements.txt --use-mirrors
-install: pip install -U tox-travis
+install:
+    - pip install -U pip
+    - pip install -U tox-travis
 
 # Command to run tests, e.g. python setup.py test
 script: tox

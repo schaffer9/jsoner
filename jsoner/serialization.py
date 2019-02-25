@@ -3,13 +3,8 @@
 import abc
 import json
 import typing as T
-from collections import UserDict
 from functools import partial
-from datetime import datetime
-from importlib import import_module
-import pydoc
-
-import pytz
+from inspect import signature
 
 from .registry import decoders
 from .registry import encoders
@@ -130,48 +125,72 @@ class JsonEncoder(json.JSONEncoder):
             return super().default(obj)
 
 
-# def json_hook(primitive: T.Any) -> T.Any:
-#     """
-#     This function will restore a object which was encoded by using the
-#     JsonEncoder.
-#     :param primitive:
-#     :return:
-#     """
-#
-#     if isinstance(primitive, T.Dict):
-#         if '__cls__' in primitive:
-#             _cls = primitive.get('__cls__')
-#             cls = import_object(_cls)
-#             return cls
-#
-#         if '__obj_cls__' in primitive:
-#             _cls = primitive.get('__obj_cls__')
-#             cls = import_object(_cls)
-#
-#         else:
-#             return primitive
-#
-#         data = primitive.get('__json_data__')
-#
-#
-#         else:
-#             if issubclass(cls, StrConvertible):
-#                 return cls.from_str(data)
-#
-#             elif issubclass(cls, DictConvertible):
-#                 # obj_dict = json.loads(json_data)
-#                 return cls.from_dict(data)
-#         if cls in decoders:
-#             decoder = decoders.get(cls)
-#             if isinstance(decoder, T.Callable):
-#                 return decoder(data, cls)
-#             else:
-#                 return decoders
-#     # else also for inner block:
-#     return primitive
+def json_hook(primitive: T.Any) -> T.Any:
+    """
 
-#
-# dump = partial(json.dump, cls=JsonEncoder)
-# dumps = partial(json.dumps, cls=JsonEncoder)
-# load = partial(json.load, object_hook=json_hook)
-# loads = partial(json.loads, object_hook=json_hook)
+    Parameters
+    ----------
+    primitive
+
+    Returns
+    -------
+
+    """
+    if not isinstance(primitive, T.Dict):
+        return primitive
+    else:
+        return maybe_convert_to_obj(primitive)
+
+
+def maybe_convert_to_obj(data: dict) -> T.Any:
+    """
+
+    Parameters
+    ----------
+    data
+
+    Returns
+    -------
+
+    """
+    if '__cls__' in data:
+        _cls = data.get('__cls__', '')
+
+        try:
+            return import_object(_cls)
+        except ImportError:
+            return data
+
+    elif '__obj_cls__' in data:
+        _cls = data.get('__obj_cls__', '')
+        try:
+            cls = import_object(_cls)
+        except ImportError:
+            return data
+
+        obj_data = data.get('__json_data__')
+
+        if issubclass(cls, StrConvertible):
+            return cls.from_str(obj_data)
+        elif issubclass(cls, DictConvertible):
+            return cls.from_dict(obj_data)
+        else:
+            decoder = decoders.get(cls)
+            if decoder is None:
+                return data
+            if callable(decoder):
+                sig = signature(decoder)
+                if len(sig.parameters) == 1:
+                    return decoder(obj_data)
+                else:
+                    return decoder(obj_data, cls)
+            else:
+                return decoder or data
+    else:
+        return data
+
+
+dump = partial(json.dump, cls=JsonEncoder)
+dumps = partial(json.dumps, cls=JsonEncoder)
+load = partial(json.load, object_hook=json_hook)
+loads = partial(json.loads, object_hook=json_hook)

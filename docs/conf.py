@@ -41,11 +41,11 @@ extensions = [
     'sphinx.ext.napoleon',
     'sphinx.ext.todo',
     'sphinx.ext.viewcode',
-    'sphinxcontrib.spelling'
 ]
-
-spelling_show_suggestions = True
-spelling_lang = 'en_US'
+if os.getenv('SPELLCHECK'):
+    extensions += 'sphinxcontrib.spelling',
+    spelling_show_suggestions = True
+    spelling_lang = 'en_US'
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

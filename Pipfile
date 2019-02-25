@@ -10,20 +10,15 @@ bumpversion = "*"
 watchdog = "*"
 flake8 = "*"
 coverage = "*"
-twine = "*"
 pytest-runner = "*"
 Sphinx = "*"
 sphinx-rtd-theme = "*"
 pytest-cov = "*"
 pytest-sugar = "*"
 pytest-pycharm = "*"
-sphinxcontrib-spelling = "*"
-mypy = "*"
 
 [packages]
 pytz = "*"
-ipdb = "*"
-ipython = "*"
 
 [requires]
 python_version = "3.7"

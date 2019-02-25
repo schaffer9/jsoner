@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import pydoc
 import typing as T
 from collections import UserDict
