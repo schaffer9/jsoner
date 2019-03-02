@@ -12,6 +12,12 @@ from .registry import import_object
 
 
 class DictConvertible(abc.ABC):
+    """
+    This abstract class implements the :meth:`to_dict` and :meth:`from_dict`.
+    Every class implementing those two methods will be a subclass of
+    :class:`DictConvertible`. It is not necessary to inherit from this class.
+
+    """
     @abc.abstractmethod
     def to_dict(self):
         raise NotImplementedError
@@ -29,6 +35,12 @@ class DictConvertible(abc.ABC):
 
 
 class StrConvertible(abc.ABC):
+    """
+    This abstract class implements the :meth:`to_str` and :meth:`from_str`.
+    Every class implementing those two methods will be a subclass of
+    :class:`StrConvertible`. It is not necessary to inherit from this class.
+
+    """
     @abc.abstractmethod
     def to_str(self):
         raise NotImplementedError
@@ -47,12 +59,13 @@ class StrConvertible(abc.ABC):
 
 class JsonerSerializable(abc.ABC):
     """
-    The :class:`JsonerSerializable` serves as a abstract class
-    which indicated if instances can be serialized by *Jsoner*.
+    The :class:`JsonerSerializable` serves as an abstract class
+    which indicated if an instance can be serialized by *Jsoner*.
     Therefore it implements the :meth:`__subclasshook__` method.
 
-    A object is serializable by *Jsoner* if it is in the encoding, decoding
-    registry or if it is convertible to a dict or to a string.
+    An object is serializable by *Jsoner* if it is registered
+    in the encoding-, decoding-registry or if it is convertible to a dict or
+    to a string.
     """
     @classmethod
     def __subclasshook__(cls, other_cls: type):
@@ -68,37 +81,70 @@ class JsonerSerializable(abc.ABC):
         return is_serializable
 
 
-def _is_instance_of_type(obj: T.Union[object, type]) -> bool:
-    is_a_cls = isinstance(obj, type)
-    is_a_cls &= '<locals>' not in obj_spec(obj)
+def _is_instance_of_type(obj_or_type: T.Union[object, type]) -> bool:
+    """
+    If the argument of this function is an instance of :class:`type`,
+    the function returns true.
+
+    .. note::
+        If the argument is a class which is defined in a local
+        namespace, the function return false as well.
+    :param obj_or_type:
+    :return:
+    """
+    is_a_cls = isinstance(obj_or_type, type)
+    is_a_cls &= '<locals>' not in obj_spec(obj_or_type)
 
     return is_a_cls
 
 
-def obj_spec(obj: T.Union[object, type]) -> str:
-    if isinstance(obj, type):
-        path = obj.__module__ + '.' + obj.__qualname__
+def obj_spec(obj_or_type: T.Union[object, type]) -> str:
+    """
+    This function returns the path of the argument class.
+
+    If the argument is an instance of :class:`type`, it returns the
+    path of the argument itself.
+
+    Usage::
+        >>> from jsoner.serialization import obj_spec
+        >>> class A:
+        ...     pass
+
+        >>> obj_spec(A)  # doctest: +ELLIPSIS
+        '...A'
+
+        >>> a = A()
+        >>> obj_spec(a)  # doctest: +ELLIPSIS
+        '...A'
+
+    :param obj_or_type:
+    :return:
+    """
+    if isinstance(obj_or_type, type):
+        path = obj_or_type.__module__ + '.' + obj_or_type.__qualname__
     else:
-        path = obj.__class__.__module__ + '.' + obj.__class__.__qualname__
+        path = obj_or_type.__class__.__module__ + '.' + obj_or_type.__class__.__qualname__
     return path
 
 
 class JsonEncoder(json.JSONEncoder):
     """
-    JsonEncoder will decode datetime objects and all objects,
-    which implement either `to_dict` and `from_dict` or
-    `to_json` and `from_json`.
+    JsonEncoder will decode all objects, which implement either `to_dict`
+    and `from_dict` or `to_str` and `from_str`.
 
-    If you want to implement to_json, you can use the  json encoder.
-    This way, all objects which implement one of those methods will also be
-    serialized and you don't have to consider them.
+    .. note::
+        :meth:`from_str` and :meth:`from_dict` must be a
+        ``classmethod``. It is enough to implement either
+        :meth:`from_str` and :meth:`to_str` or
+        :meth:`from_dict` and :meth:`to_dict`. If both are implemented, then
+        :meth:`from_dict` and :meth:`to_dict` are preferred.
+
+    If you do not want to implement methods in your class, or you might have
+    no access to the class definition, you can use
+    :func:`jsoner.registry.encoders` and :func:`jsoner.registry.decoders`.
+
     """
     def default(self, obj, *args, **kwargs):
-        """
-
-        :param obj:
-        :return:
-        """
 
         if isinstance(obj, JsonerSerializable):
             obj_dict = {
@@ -127,14 +173,11 @@ class JsonEncoder(json.JSONEncoder):
 
 def json_hook(primitive: T.Any) -> T.Any:
     """
+    This hook will try to recreate an object from the data it receives. It
+    it fails to do so, it will just return the original data.
 
-    Parameters
-    ----------
-    primitive
-
-    Returns
-    -------
-
+    :param primitive:
+    :return:
     """
     if not isinstance(primitive, T.Dict):
         return primitive
@@ -144,14 +187,10 @@ def json_hook(primitive: T.Any) -> T.Any:
 
 def maybe_convert_to_obj(data: dict) -> T.Any:
     """
+    This function will try to create an object from the data dictionary.
 
-    Parameters
-    ----------
-    data
-
-    Returns
-    -------
-
+    :param data:
+    :return:
     """
     if '__cls__' in data:
         _cls = data.get('__cls__', '')
@@ -170,10 +209,10 @@ def maybe_convert_to_obj(data: dict) -> T.Any:
 
         obj_data = data.get('__json_data__')
 
-        if issubclass(cls, StrConvertible):
-            return cls.from_str(obj_data)
-        elif issubclass(cls, DictConvertible):
+        if issubclass(cls, DictConvertible):
             return cls.from_dict(obj_data)
+        elif issubclass(cls, StrConvertible):
+            return cls.from_str(obj_data)
         else:
             decoder = decoders.get(cls)
             if decoder is None:

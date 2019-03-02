@@ -8,10 +8,11 @@ from typing import Callable
 
 class Registry(UserDict):
     """
-    The :class:`Registry` allows simple key value mapping. Each key is
+    The :class:`Registry` allows simple key-value mapping. Each key is
     only allowed once in the registry.
 
     Usage::
+        >>> from jsoner.registry import Registry
         >>> reg = Registry()
 
         >>> reg.add('foo', 42)
@@ -27,6 +28,7 @@ class Registry(UserDict):
         42
 
     """
+
     @property
     def registry(self) -> dict:
         """
@@ -42,16 +44,10 @@ class Registry(UserDict):
         Adds the key, value pair to the registry. Each key is only
         allowed once in the registry.
 
-        Parameters
-        ----------
-        key
-        value
-
-        Raises
-        ------
-        KeyError
-            If the key is already in the registry.
-
+        :param key:
+        :param value:
+        :return:
+        :raise KeyError: If the key is already in the registry.
         """
         if key in self.data:
             msg = 'Key `{}` is already in the registry!'.format(key)
@@ -64,19 +60,14 @@ class Registry(UserDict):
         :meth:`register` servers as a decorator to add functions to the
         registry.
 
-        Parameters
-        ----------
-        key: T.Any
-
-        Returns
-        -------
-        Callable
-            The decorator function, which takes one argument, adds it
-            to the registry and returns the argument without modifying it.
+        :param key:
+        :return: Callable
         """
+
         def inner(func):
             self.add(key, func)
             return inner
+
         return inner
 
     def __contains__(self, item) -> bool:
@@ -92,16 +83,16 @@ class Registry(UserDict):
 
 class SubclassRegistry(Registry):
     """
-    The :class:`SubclassRegistry` will not only map a single key value pair,
+    The :class:`SubclassRegistry` will not only map a single key-value pair,
     but will also retrieve a value if the key, or the type of the key
     is a Subclass of any of the keys.
 
-    If the key, seems to be a object, which could potentially be in the
-    registry, but is not found at once, the :class:`SubclassRegistry` will
+    If the key, seems to be an object, which could potentially be in the
+    registry but is not found at once, the :class:`SubclassRegistry` will
     search the mro of the object and check against its entries.
 
     Usage::
-
+        >>> from jsoner.registry import SubclassRegistry
         >>> reg = SubclassRegistry()
 
         >>> reg.add(dict, 42)
@@ -122,7 +113,6 @@ class SubclassRegistry(Registry):
         The registration also works with strings
 
         >>> from datetime import datetime
-
         >>> reg.add('datetime.datetime', 'foo')
         >>> reg.get(datetime)
         'foo'
@@ -135,13 +125,13 @@ class SubclassRegistry(Registry):
         >>> @reg.register(A)
         ... def foo():
         ...     return 42
-
         >>> reg.get(A)()
         42
         >>> reg.get(B)()
         42
 
     """
+
     def __getitem__(self, key: T.Any) -> T.Any:
         """
         Returns the registered function for the given object or type
@@ -196,20 +186,11 @@ def import_object(path: str) -> T.Any:
     Import the object or raise an :exc:`ImportError` if the object is not
     found.
 
-    Parameters
-    ----------
-    path: str
-        The path to the object.
-
-    Returns
-    -------
-        The imported object.
-
-    Raises
-    ------
-    ImportError
-
+    :param path: The path to the object.
+    :return: The imported object.
+    :raise ImportError:
     """
+
     t = pydoc.locate(path)
     if t is None:
         msg = 'Object `{}` could not be found'.format(path)
@@ -218,4 +199,15 @@ def import_object(path: str) -> T.Any:
 
 
 encoders = SubclassRegistry()
+"""
+:attr:`encoders` contains a mapping of types and encoding functions. An
+encoding function takes an argument and returns a value which should be
+json serializable. The function which is defined in :attr:`decoders`
+must be able to recreate the object from the returned value.
+"""
+
 decoders = SubclassRegistry()
+"""
+:attr:`encoders` contains the inverse functions-type mapping for
+:attr:`encoders`.
+"""

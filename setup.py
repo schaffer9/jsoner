@@ -34,6 +34,7 @@ setup(
     ],
     description="Jsoner allows you to easily "
                 "convert your classes to json and back.",
+    long_description_content_type='text/x-rst',
     install_requires=requirements,
     license="MIT license",
     long_description=readme + '\n\n' + history,
