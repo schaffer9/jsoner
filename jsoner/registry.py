@@ -121,6 +121,7 @@ class SubclassRegistry(Registry):
         42
 
         Furthermore it can be used as decorator.
+
         >>> reg = SubclassRegistry()
         >>> @reg.register(A)
         ... def foo():
@@ -190,7 +191,6 @@ def import_object(path: str) -> T.Any:
     :return: The imported object.
     :raise ImportError:
     """
-
     t = pydoc.locate(path)
     if t is None:
         msg = 'Object `{}` could not be found'.format(path)
@@ -208,6 +208,6 @@ must be able to recreate the object from the returned value.
 
 decoders = SubclassRegistry()
 """
-:attr:`encoders` contains the inverse functions-type mapping for
+:attr:`decoders` contains the inverse functions-type mapping for
 :attr:`encoders`.
 """

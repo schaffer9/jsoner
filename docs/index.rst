@@ -6,8 +6,6 @@ Welcome to jsoner's documentation!
    :caption: Contents:
 
    readme
-   installation
-   usage
    modules
    contributing
    authors

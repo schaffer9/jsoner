@@ -13,23 +13,213 @@ jsoner
         :target: https://coveralls.io/github/sschaffer92/jsoner
         :alt: Coverage
 
-
-Jsoner allows you to easily convert your classes to json and back.
-
-
 * Free software: MIT license
+
 * Documentation: https://jsoner.readthedocs.io.
 
+*Jsoner* is a package aiming for making conversion to and from json easier.
 
-Features
---------
 
-* TODO
+Installation
+------------
 
-Credits
--------
 
-This package was created with Cookiecutter_ and the `audreyr/cookiecutter-pypackage`_ project template.
+Stable release
+~~~~~~~~~~~~~~
 
-.. _Cookiecutter: https://github.com/audreyr/cookiecutter
-.. _`audreyr/cookiecutter-pypackage`: https://github.com/audreyr/cookiecutter-pypackage
+To install jsoner, run this command in your terminal:
+
+.. code-block:: console
+
+    pip install jsoner
+
+This is the preferred method to install jsoner, as it will always install the most recent stable release.
+
+If you don't have `pip`_ installed, this `Python installation guide`_ can guide
+you through the process.
+
+.. _pip: https://pip.pypa.io
+.. _Python installation guide: http://docs.python-guide.org/en/latest/starting/installation/
+
+
+From sources
+~~~~~~~~~~~~
+
+The sources for jsoner can be downloaded from the `Github repo`_.
+
+You can either clone the public repository:
+
+.. code-block:: console
+
+    $ git clone git://github.com/sschaffer92/jsoner
+
+Or download the `tarball`_:
+
+.. code-block:: console
+
+    $ curl  -OL https://github.com/sschaffer92/jsoner/tarball/master
+
+Once you have a copy of the source, you can install it with:
+
+.. code-block:: console
+
+    $ python setup.py install
+
+
+.. _Github repo: https://github.com/sschaffer92/jsoner
+.. _tarball: https://github.com/sschaffer92/jsoner/tarball/master
+
+
+*Jsoner* builds on the builtin *json* python package. Since you cannot serialize object to json by
+default it can be useful to have a nice way for doing so. This package provides three different ways for
+achieving this.
+
+Usage
+-----
+
+- provide an ``to_dict`` and ``from_dict`` method::
+
+    >>> from jsoner import dumps, loads
+    >>> class A:
+    ...     def __init__(self, a):
+    ...         self.a = a
+    ...
+    ...     def to_dict(self) -> dict:
+    ...         return {'a': self.a}
+    ...
+    ...     @classmethod
+    ...     def from_dict(cls, data: dict) -> 'A':
+    ...         return A(**data)
+
+    >>> a = A(42)
+    >>> data = dumps(a)
+    >>> a = loads(data)
+
+
+- or provide an ``to_str`` and ``from_str`` method::
+
+    >>> from jsoner import dumps, loads
+    >>> class A:
+    ...     def __init__(self, a):
+    ...         self.a = a
+    ...
+    ...     def to_str(self) -> str:
+    ...         return str(self.a)
+    ...
+    ...     @classmethod
+    ...     def from_str(cls, data: str) -> 'A':
+    ...         return A(data)
+
+    >>> a = A('foo')
+    >>> data = dumps(a)
+    >>> a = loads(data)
+
+
+- or implement a conversion function pair::
+
+    >>> from jsoner import dumps, loads
+    >>> from jsoner import encoders, decoders
+    >>> class A:
+    ...     def __init__(self, a):
+    ...         self.a = a
+
+    >>> @encoders.register(A)
+    ... def encode_a(a: 'A') -> str:
+    ...     return a.a
+
+    >>> @decoders.register(A)
+    ... def decode_a(data: str) -> str:
+    ...     return A(data)
+
+    >>> a = A('foo')
+    >>> data = dumps(a)
+    >>> a = loads(data)
+
+.. note::
+
+    This way is especially useful if you don't have direct access to the class definition.
+
+
+*Celery* and *Django*
+~~~~~~~~~~~~~~~~~~~~~
+
+One good use case for the *Jsoner* package is the *Celery* serialization of tasks and task results.
+
+To make *Celery* use *Jsoner* you can apply the following settings::
+
+    from celery import app
+    from kombu import serialization
+
+    from jsoner import dumps
+    from jsoner import loads
+
+    serialization.register('jsoner', dumps, loads, content_type='application/json')
+
+    app = Celery('Test')
+
+    app.conf.update(
+        accept_content=['jsoner'],
+        task_serializer='jsoner',
+        result_serializer='jsoner',
+        result_backend='rpc'
+    )
+
+
+    class A:
+        def __init__(self, foo):
+            self.foo = foo
+
+        @classmethod
+        def from_dict(cls, data: dict) -> 'A':
+            return A(**data)
+
+        def to_dict(self):
+            return {'foo': self.foo}
+
+    a = A('bar')
+
+    @app.task
+    def task(obj: A) -> 'A':
+        ...
+        return obj
+
+    a = task.delay(a).get()
+
+
+This way you can easily serialize django model instances and pass them to the
+*Celery* task.
+
+.. code-block:: python
+   :name: models.py
+
+    from django.db import models
+
+    class Person(models.Model):
+        first_name = models.CharField(max_length=30)
+        last_name = models.CharField(max_length=30)
+
+
+Then you can just pass the model to the celery task directly:
+
+.. code-block:: python
+
+    from django.db.models import Model
+    from jsoner import encoders, decoders
+
+    import .jsoner_conf
+    from .models import Person
+
+
+    @encoders.register(Model)
+    def to_primary_key(model: Model) -> int:
+        return model.pk
+
+    @decoders.register(Model)
+    def from_primary_key(pk: int, model_cls: Model) -> Model:
+        return model_cls.objects.get(pk=pk)
+
+    p = Person(first_name="Jack", last_name="Black")
+    p = task.delay(p).get()
+
+
+Similar you could create a conversion function pair for querysets.
