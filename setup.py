@@ -30,7 +30,6 @@ setup(
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
-        'Programming Language :: Python :: pypy',
     ],
     description="Jsoner allows you to easily "
                 "convert your classes to json and back.",
@@ -48,4 +47,10 @@ setup(
     url='https://github.com/sschaffer92/jsoner',
     version='0.2.0',
     zip_safe=False,
+    python_requires='>=3.4',
+    project_urls={
+        'Documentation': 'https://jsoner.readthedocs.io/en/latest/',
+        'Source': 'https://github.com/sschaffer92/jsoner/',
+        'Tracker': 'https://github.com/sschaffer92/jsoner/issues',
+    },
 )
