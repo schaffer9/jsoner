@@ -31,15 +31,9 @@ To install jsoner, run this command in your terminal:
 
 .. code-block:: console
 
-    pip install jsoner
+    $ pip install jsoner
 
 This is the preferred method to install jsoner, as it will always install the most recent stable release.
-
-If you don't have `pip`_ installed, this `Python installation guide`_ can guide
-you through the process.
-
-.. _pip: https://pip.pypa.io
-.. _Python installation guide: http://docs.python-guide.org/en/latest/starting/installation/
 
 
 From sources
@@ -70,74 +64,79 @@ Once you have a copy of the source, you can install it with:
 .. _tarball: https://github.com/sschaffer92/jsoner/tarball/master
 
 
-*Jsoner* builds on the builtin *json* python package. Since you cannot serialize object to json by
-default it can be useful to have a nice way for doing so. This package provides three different ways for
-achieving this.
-
 Usage
 -----
 
-- provide an ``to_dict`` and ``from_dict`` method::
+*Jsoner* builds on the builtin *json* python package. Since you cannot serialize object to json by
+default it can be useful to have a nice way for doing so. This package provides three different ways to
+achieve this:
 
-    >>> from jsoner import dumps, loads
-    >>> class A:
-    ...     def __init__(self, a):
-    ...         self.a = a
-    ...
-    ...     def to_dict(self) -> dict:
-    ...         return {'a': self.a}
-    ...
-    ...     @classmethod
-    ...     def from_dict(cls, data: dict) -> 'A':
-    ...         return A(**data)
+- provide an ``to_dict`` and ``from_dict`` method:
 
-    >>> a = A(42)
-    >>> data = dumps(a)
-    >>> a = loads(data)
+.. code-block:: python
 
+    from jsoner import dumps, loads
+    class A:
+        def __init__(self, a):
+            self.a = a
 
-- or provide an ``to_str`` and ``from_str`` method::
+        def to_dict(self) -> dict:
+            return {'a': self.a}
 
-    >>> from jsoner import dumps, loads
-    >>> class A:
-    ...     def __init__(self, a):
-    ...         self.a = a
-    ...
-    ...     def to_str(self) -> str:
-    ...         return str(self.a)
-    ...
-    ...     @classmethod
-    ...     def from_str(cls, data: str) -> 'A':
-    ...         return A(data)
+        @classmethod
+        def from_dict(cls, data: dict) -> 'A':
+            return A(**data)
 
-    >>> a = A('foo')
-    >>> data = dumps(a)
-    >>> a = loads(data)
+    a = A(42)
+    data = dumps(a)
+    a = loads(data)
 
 
-- or implement a conversion function pair::
+- or provide an ``to_str`` and ``from_str`` method:
 
-    >>> from jsoner import dumps, loads
-    >>> from jsoner import encoders, decoders
-    >>> class A:
-    ...     def __init__(self, a):
-    ...         self.a = a
+.. code-block:: python
 
-    >>> @encoders.register(A)
-    ... def encode_a(a: 'A') -> str:
-    ...     return a.a
+    from jsoner import dumps, loads
+    class A:
+        def __init__(self, a):
+            self.a = a
 
-    >>> @decoders.register(A)
-    ... def decode_a(data: str) -> str:
-    ...     return A(data)
+        def to_str(self) -> str:
+            return str(self.a)
 
-    >>> a = A('foo')
-    >>> data = dumps(a)
-    >>> a = loads(data)
+        @classmethod
+        def from_str(cls, data: str) -> 'A':
+            return A(data)
 
-.. note::
+    a = A('foo')
+    data = dumps(a)
+    a = loads(data)
 
-    This way is especially useful if you don't have direct access to the class definition.
+
+- or implement a conversion function pair (This way is especially useful if
+  you don't have direct access to the class definition):
+
+.. code-block:: python
+
+    from jsoner import dumps, loads
+    from jsoner import encoders, decoders
+    class A:
+        def __init__(self, a):
+            self.a = a
+
+    @encoders.register(A)
+    def encode_a(a: 'A') -> str:
+        return a.a
+
+    @decoders.register(A)
+    def decode_a(data: str) -> str:
+        return A(data)
+
+    a = A('foo')
+    data = dumps(a)
+    a = loads(data)
+
+*Jsoner* can also deal with nested objects as long they are also serializable as described above.
 
 
 *Celery* and *Django*
@@ -145,18 +144,21 @@ Usage
 
 One good use case for the *Jsoner* package is the *Celery* serialization of tasks and task results.
 
-To make *Celery* use *Jsoner* you can apply the following settings::
+To make *Celery* use *Jsoner* you can apply the following settings:
+
+.. code-block:: python
 
     from celery import app
     from kombu import serialization
 
-    from jsoner import dumps
-    from jsoner import loads
+    from jsoner import dumps, loads
 
+    # register Jsoner
     serialization.register('jsoner', dumps, loads, content_type='application/json')
 
     app = Celery('Test')
 
+    # tell celery to use Jsoner
     app.conf.update(
         accept_content=['jsoner'],
         task_serializer='jsoner',
@@ -164,7 +166,7 @@ To make *Celery* use *Jsoner* you can apply the following settings::
         result_backend='rpc'
     )
 
-
+    # Celery can now serialize objects which can be serialized by Jsoner.
     class A:
         def __init__(self, foo):
             self.foo = foo
@@ -206,19 +208,19 @@ Then you can just pass the model to the celery task directly:
     from django.db.models import Model
     from jsoner import encoders, decoders
 
-    import .jsoner_conf
     from .models import Person
 
-
+    # Create a conversion function pair which just saved the primary key.
     @encoders.register(Model)
     def to_primary_key(model: Model) -> int:
         return model.pk
 
+    # Load object from the primary key.
     @decoders.register(Model)
     def from_primary_key(pk: int, model_cls: Model) -> Model:
         return model_cls.objects.get(pk=pk)
 
-    p = Person(first_name="Jack", last_name="Black")
+    p = Person(first_name="Foo", last_name="Bar")
     p = task.delay(p).get()
 
 

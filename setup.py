@@ -39,7 +39,7 @@ setup(
     license="MIT license",
     long_description=readme + '\n\n' + history,
     include_package_data=True,
-    keywords='jsoner',
+    keywords='jsoner json celery django serialization',
     name='jsoner',
     packages=find_packages(include=['jsoner']),
     setup_requires=setup_requirements,
